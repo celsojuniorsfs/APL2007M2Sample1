@@ -44,6 +44,15 @@ public partial class MainWindow : Window
     };
 
     // Evento de clique do botão de início
+    /// <summary>
+    /// Manipulador de evento para o clique do botão de início.
+    /// </summary>
+    /// <param name="sender">O objeto que disparou o evento.</param>
+    /// <param name="e">Os dados do evento.</param>
+    /// <remarks>
+    /// Este método desabilita o botão de início, limpa a caixa de texto de resultados e
+    /// inicia uma tarefa assíncrona para somar os tamanhos das páginas.
+    /// </remarks>
     private void OnStartButtonClick(object sender, RoutedEventArgs e)
     {
         // Desabilita o botão de início e limpa a caixa de texto de resultados
