@@ -10,10 +10,16 @@ using System.Windows.Controls;
 
 public partial class MainWindow : Window
 {
+    // Caixa de texto para exibir os resultados dos downloads
     private TextBox _resultsTextBox;
+    
+    // Botão para iniciar o processo de download
     private Button _startButton;
+    
+    // HttpClient configurado para limitar o tamanho máximo do buffer de resposta
     private readonly HttpClient _client = new HttpClient { MaxResponseContentBufferSize = 1_000_000 };
 
+    // Lista de URLs a serem processadas
     private readonly IEnumerable<string> _urlList = new string[]
     {
         "https://docs.microsoft.com",
@@ -37,17 +43,24 @@ public partial class MainWindow : Window
         "https://docs.microsoft.com/gaming"
     };
 
+    // Evento de clique do botão de início
     private void OnStartButtonClick(object sender, RoutedEventArgs e)
     {
+        // Desabilita o botão de início e limpa a caixa de texto de resultados
         _startButton.IsEnabled = false;
         _resultsTextBox.Clear();
 
+        // Inicia a tarefa assíncrona para somar os tamanhos das páginas
         Task.Run(() => StartSumPageSizesAsync());
     }
 
+    // Inicia a soma dos tamanhos das páginas de forma assíncrona
     private async Task StartSumPageSizesAsync()
     {
+        // Chama o método para somar os tamanhos das páginas
         await SumPageSizesAsync();
+        
+        // Atualiza a interface do usuário para indicar que o controle retornou e reabilita o botão de início
         await Dispatcher.BeginInvoke(() =>
         {
             _resultsTextBox.Text += $"\nControl returned to {nameof(OnStartButtonClick)}.";
@@ -55,19 +68,25 @@ public partial class MainWindow : Window
         });
     }
 
+    // Soma os tamanhos das páginas baixadas de forma assíncrona
     private async Task SumPageSizesAsync()
     {
+        // Inicia um cronômetro para medir o tempo de execução
         var stopwatch = Stopwatch.StartNew();
 
+        // Cria uma coleção de tarefas para processar cada URL
         IEnumerable<Task<int>> downloadTasksQuery =
             from url in _urlList
             select ProcessUrlAsync(url, _client);
 
+        // Converte a consulta em um array de tarefas
         Task<int>[] downloadTasks = downloadTasksQuery.ToArray();
 
+        // Aguarda todas as tarefas serem concluídas e soma os tamanhos dos conteúdos baixados
         int[] lengths = await Task.WhenAll(downloadTasks);
         int total = lengths.Sum();
 
+        // Atualiza a interface do usuário com o total de bytes retornados e o tempo decorrido
         await Dispatcher.BeginInvoke(() =>
         {
             stopwatch.Stop();
@@ -77,16 +96,23 @@ public partial class MainWindow : Window
         });
     }
 
+    // Processa uma URL de forma assíncrona, baixando seu conteúdo e retornando seu tamanho
     private async Task<int> ProcessUrlAsync(string url, HttpClient client)
     {
         try
         {
+            // Baixa o conteúdo da URL como um array de bytes
             byte[] byteArray = await client.GetByteArrayAsync(url);
+            
+            // Exibe os resultados na interface do usuário
             await DisplayResultsAsync(url, byteArray);
+            
+            // Retorna o tamanho do conteúdo baixado
             return byteArray.Length;
         }
         catch (HttpRequestException e)
         {
+            // Captura exceções específicas de requisições HTTP e exibe uma mensagem de erro
             await Dispatcher.BeginInvoke(() =>
             {
                 _resultsTextBox.Text += $"\nError downloading {url}: {e.Message}\n";
@@ -95,6 +121,7 @@ public partial class MainWindow : Window
         }
         catch (Exception e)
         {
+            // Captura quaisquer outras exceções inesperadas e exibe uma mensagem de erro
             await Dispatcher.BeginInvoke(() =>
             {
                 _resultsTextBox.Text += $"\nUnexpected error downloading {url}: {e.Message}\n";
@@ -103,10 +130,12 @@ public partial class MainWindow : Window
         }
     }
 
+    // Exibe os resultados do download na interface do usuário
     private Task DisplayResultsAsync(string url, byte[] content) =>
         Dispatcher.BeginInvoke(() =>
             _resultsTextBox.Text += $"{url,-60} {content.Length,10:#,#}\n")
                   .Task;
 
+    // Garante que o HttpClient seja descartado quando a janela for fechada
     protected override void OnClosed(EventArgs e) => _client.Dispose();
 }
